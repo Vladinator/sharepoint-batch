@@ -1,4 +1,4 @@
-# SharePoint $batch
+# SharePointBatch
 Inspiration drawn from this article:
 https://msdn.microsoft.com/en-us/library/office/dn903506.aspx
 
