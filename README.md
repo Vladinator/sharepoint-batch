@@ -16,7 +16,7 @@ Tested with Office 365 running SharePoint 2013 SP1 with the following browsers:
 - Safari 5
 
 ## Dependencies
-No external libraries are required.
+No external libraries are required. A version of SharePoint 2013 with support for /_api/$batch
 
 ## Examples
 You can find these appended at the end of the batch.js script.
