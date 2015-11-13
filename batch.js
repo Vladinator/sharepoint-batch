@@ -268,9 +268,11 @@
 					var line = lines[i];
 
 					if (/^--batchresponse_.+--$/i.test(line)) {
-						temp.data = parseResponse.call(this, temp.data);
-						results.push(temp);
-						temp = undefined;
+						if (temp !== undefined) {
+							temp.data = parseResponse.call(this, temp.data);
+							results.push(temp);
+							temp = undefined;
+						}
 						level = LEVEL.EOF;
 						break;
 
