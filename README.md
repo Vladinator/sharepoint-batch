@@ -1,6 +1,7 @@
 # SharePointBatch
 Inspiration drawn from this article:
 https://msdn.microsoft.com/en-us/library/office/dn903506.aspx
+
 OData v3 documentation:
 http://www.odata.org/documentation/odata-version-3-0/batch-processing/
 
