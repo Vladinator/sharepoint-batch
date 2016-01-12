@@ -8,7 +8,7 @@ This Javascript library is supposed to help developers efficiently build batch j
 Please note that this library is still a work in progress. At this stage this is merely a research project to better understand the new batch support for SharePoint. I am still willing to share my findings in hope that it helps someone out, or perhaps even inspires others to create their own libraries, more complete than what I have written here. :)
 
 ## Compatibility
-Tested with Office 365 running SharePoint 2013 SP1 with the following browsers:
+Tested with Office 365 running SharePoint 2016 with the following browsers:
 - Chrome 45
 - Firefox 40
 - Internet Explorer 11
@@ -16,7 +16,9 @@ Tested with Office 365 running SharePoint 2013 SP1 with the following browsers:
 - Safari 5
 
 ## Dependencies
-No external libraries are required. A version of SharePoint 2013 with support for /_api/$batch
+No external libraries are required. A version of SharePoint with support for /_api/$batch
 
 ## Examples
 You can find these appended at the end of the batch.js script.
+
+## Additional reading
