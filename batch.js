@@ -18,6 +18,7 @@
 			}, options),
 			guid: createGUID(),
 			jobs: [],
+			changesetSlots: 100,
 			/**
 			 * public interface
 			 */
@@ -32,7 +33,7 @@
 		/**
 		 * append a job to the batch
 		 *
-		 * @return integer index of the job
+		 * @return integer index of the job, or -1 if the job wasn't added because we have no room for it
 		 */
 		function append(options) {
 			options = extend({
@@ -62,6 +63,17 @@
 
 			// call appropriate handler
 			(options.method !== 'GET' ? post : get).call(this);
+
+			// this job takes up changeset slots
+			var changesetSlots = this.changesetSlots;
+			changesetSlots -= options.changesets.length;
+
+			// sanity check
+			if (changesetSlots < 0) {
+				return -1;
+			} else {
+				this.changesetSlots = changesetSlots;
+			}
 
 			// store job in our array
 			return this.jobs.push(options) - 1;
@@ -115,8 +127,12 @@
 					data.push('Accept: application/json;odata=verbose');
 					data.push('Content-Type: application/json;odata=verbose');
 
-					var headers = extend({}, options.headers);
-					extend(headers, changeset.headers);
+					var headers = options.headers;
+
+					if (changeset !== null) {
+						headers = extend({}, options.headers);
+						extend(headers, changeset.headers);
+					}
 
 					for (var key in headers) {
 						if (headers.hasOwnProperty(key)) {
@@ -126,7 +142,7 @@
 
 					data.push('');
 
-					if (changeset.data !== null) {
+					if (changeset !== null && changeset.data !== null) {
 						data.push(JSON.stringify(changeset.data));
 						data.push('');
 					}
