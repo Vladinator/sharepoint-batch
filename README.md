@@ -1,6 +1,8 @@
 # SharePointBatch
 Inspiration drawn from this article:
 https://msdn.microsoft.com/en-us/library/office/dn903506.aspx
+OData v3 documentation:
+http://www.odata.org/documentation/odata-version-3-0/batch-processing/
 
 This Javascript library is supposed to help developers efficiently build batch jobs and parsing the response from the server. The reason I made this was that the existing code provided by Microsoft seemed a bit underwhelming and too specific, while there is a need for a more general library that everyone could use in their projects.
 
@@ -20,5 +22,3 @@ No external libraries are required. A version of SharePoint with support for /_a
 
 ## Examples
 You can find these appended at the end of the batch.js script.
-
-## Additional reading
