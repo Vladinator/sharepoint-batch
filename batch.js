@@ -412,14 +412,34 @@
 		var s = '';
 
 		if (isObject(o)) {
-			for (var key in o) {
-				var v = '';
-				try {
-					v = encodeURIComponent(o[key]);
-				} catch (e) {
-				}
-				s += (s === '' ? '?' : '&') + key + '=' + v;
-			}
+		    for (var key in o) {
+		        if (o.hasOwnProperty(key)) {
+		            var v = o[key];
+
+		            if (isArray(v)) {
+		                for (var i = 0; i < v.length; i++) {
+		                    var x = v[i];
+
+		                    try {
+		                        x = encodeURIComponent(x);
+		                    } catch (e) {
+		                        x = '';
+		                    }
+
+		                    s += (s === '' ? '?' : '&') + key + '[]=' + x;
+		                }
+
+		            } else {
+		                try {
+		                    v = encodeURIComponent(v);
+		                } catch (e) {
+		                    v = '';
+		                }
+
+		                s += (s === '' ? '?' : '&') + key + '=' + v;
+		            }
+		        }
+		    }
 		}
 
 		return s;
