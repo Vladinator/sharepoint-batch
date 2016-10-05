@@ -112,8 +112,13 @@
 				data.push('--batch_' + this.guid);
 
 				data.push('Content-Type: multipart/mixed; boundary="' + boundary + '"');
+				data.push('Content-Length: 0');
+				var contentLengthIndex = data.length - 1;
 				data.push('Content-Transfer-Encoding: binary');
 				data.push('');
+
+				var startAt = data.length,
+					contentLength = -1;
 
 				for (var i = 0; i < options.changesets.length; i++) {
 					var changeset = options.changesets[i];
@@ -157,6 +162,12 @@
 				}
 
 				data.push('--' + boundary + '--');
+
+				for (var i = startAt; i < data.length; i++) {
+					contentLength += data[i].length + '\r\n'.length;
+				}
+
+				data[contentLengthIndex] = 'Content-Length: ' + contentLength;
 			}
 
 			/**
