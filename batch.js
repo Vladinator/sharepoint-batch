@@ -1,6 +1,6 @@
 /*!
  * SharePointBatch
- * Copyright 2015 Alex Pedersen
+ * Copyright 2016 Alex Pedersen
  * Licensed under the MIT license
  * https://github.com/Vladinator89/sharepoint-batch
  */
@@ -127,6 +127,14 @@
 					data.push('Accept: application/json;odata=verbose');
 					data.push('Content-Type: application/json;odata=verbose');
 
+					var jsonPayload = changeset !== null && changeset.data !== null
+						? JSON.stringify(changeset.data)
+						: null;
+
+					if (jsonPayload && jsonPayload.length) {
+						data.push('Content-Length: ' + jsonPayload.length);
+					}
+
 					var headers = options.headers;
 
 					if (changeset !== null) {
@@ -142,8 +150,8 @@
 
 					data.push('');
 
-					if (changeset !== null && changeset.data !== null) {
-						data.push(JSON.stringify(changeset.data));
+					if (jsonPayload) {
+						data.push(jsonPayload);
 						data.push('');
 					}
 				}
@@ -494,7 +502,7 @@
 	 * @return true if o is an object
 	 */
 	function isObject(o, isStrict) {
-		return o && typeof o === 'object' && (!isStrict || o.constructor === window.Object);
+		return o && typeof o === 'object' && (!isStrict || !isArray(o));
 	}
 
 	/**
@@ -503,7 +511,7 @@
 	 * @return true if o is an array
 	 */
 	function isArray(o) {
-		return o && typeof o === 'object' && o.constructor === window.Array;
+		return Array.isArray(o);
 	}
 
 	/**
