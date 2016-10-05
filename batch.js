@@ -118,7 +118,7 @@
 				data.push('');
 
 				var startAt = data.length,
-					contentLength = -1;
+					contentLength = '\r\n'.length * -1;
 
 				for (var i = 0; i < options.changesets.length; i++) {
 					var changeset = options.changesets[i];
