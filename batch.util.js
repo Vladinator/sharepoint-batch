@@ -76,7 +76,8 @@
 
 			var _this = this,
 				jobs = _this.jobs,
-				jobResults = [];
+				jobResults = [],
+				jobIndex = 0;
 
 			if (typeof options.before === 'function') {
 				options.before.call(_this, jobs, jobResults);
@@ -85,7 +86,7 @@
 			next();
 
 			function next() {
-				var job = jobs.shift();
+				var job = jobs[jobIndex];
 
 				if (job) {
 					job.send({
@@ -118,6 +119,7 @@
 					if (typeof options.progress === 'function') {
 						options.progress.call(_this, job, jobs, jobResults);
 					}
+					jobIndex++;
 					next.call(_this);
 				}
 
