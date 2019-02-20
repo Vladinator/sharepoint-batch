@@ -334,3 +334,25 @@
 	}
 
 })();
+
+/*!
+ * SharePointBatchUtil
+ * Example and documentation
+ *
+ * This example showcases the Util module and how to use it to handle more than the 100 changeset limit.
+ * Constructing the object takes the same options as the native SharePointBatch described above.
+ * It overrides the native spawn/append/remove/send methods and adjusts them to be able to handle multiple queued jobs
+ * in the form of several SharePointBatch instances, instead of just one instance. This makes every instance capable to
+ * process 100 changesets, at the same time it grows dynamically when needed, and when results are returned they are combined
+ * in one return array with reference to the parent SharePointBatch in case you need that distinction.
+ */
+(function(){
+	'use strict';
+
+	var spbu = new SharePointBatchUtil({
+		url: _spPageContextInfo.webAbsoluteUrl,
+		digest: document.getElementById('__REQUESTDIGEST').value
+	});
+
+	// TODO: write some smart examples that showcases how this is useful - refer to examples above in the meanwhile
+})();

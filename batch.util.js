@@ -42,19 +42,21 @@
 		}
 
 		function append() {
-			var status = 0;
+			var status = -1;
 			for (var i = 0; i < arguments.length; i++) {
 				var a = arguments[i];
 				if (a instanceof batch) {
 					this.jobs.push(a);
+					status++;
 				} else if (batch.prototype.isObject(a, true)) {
 					var index = currentJob.append(a);
 					if (index < 0) {
 						currentJob = currentJob.spawn();
 						currentJob.append(a);
+						this.jobs.push(currentJob);
 					}
+					status++;
 				}
-				status++;
 			}
 			return status;
 		}
@@ -66,6 +68,15 @@
 					index = this.jobs.indexOf(a);
 				if (index > -1) {
 					purged.push(this.jobs.splice(index, 1));
+				}
+				for (var j = 0; j < this.jobs.length; j++) {
+					var job = this.jobs[j];
+					if (batch.prototype.isObject(job.jobs, true)) {
+						index = job.jobs.indexOf(a);
+						if (index > -1) {
+							purged.push(job.jobs.splice(index, 1));
+						}
+					}
 				}
 			}
 			return purged.length ? purged : false;
