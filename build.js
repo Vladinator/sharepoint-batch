@@ -1,3 +1,4 @@
+const webpack = require('webpack');
 const uglify = require('uglify-js');
 const path = require('node:path');
 const fs = require('node:fs/promises');
@@ -15,10 +16,19 @@ const fs = require('node:fs/promises');
         code[file] = (await fs.readFile(filepath)).toString('utf-8');
     }
 
-    const results = uglify.minify(code);
+    const results = uglify.minify(code, {
+        toplevel: true,
+        ie8: true,
+        v8: true,
+        webkit: true,
+        warnings: true,
+    });
 
     if (results.error)
         return console.error(results.error);
+
+    if (results.warnings)
+        console.warn(results.warnings);
 
     const output = path.join(__dirname, 'build');
     const outputpath = path.join(output, 'build.min.js');
