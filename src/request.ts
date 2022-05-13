@@ -1,6 +1,5 @@
-import fetch from 'node-fetch';
-import { extend } from 'utils';
 import { RequestOptions } from 'types';
+import { extend } from 'utils';
 
 const fallback: Partial<RequestOptions> = { method: 'GET' };
 
@@ -10,7 +9,7 @@ export const Request = async (options: RequestOptions) => {
 
     const response = await fetch(options.url, options as never);
 
-    console.warn(response.ok, response.status, response.statusText); // DEBUG
+    console.warn('Request', options, '->', response.ok, response.status, response.statusText); // DEBUG
 
     return response;
 
