@@ -4,7 +4,8 @@ const fs = require('node:fs/promises');
 
 (async () => {
 
-    const dist = path.join(__dirname, 'build');
+    const tsconfig = require('./tsconfig.json');
+    const dist = path.join(__dirname, tsconfig.compilerOptions.outDir);
     const files = (await fs.readdir(dist)).filter(file => /\.js$/i.test(file));
     const code = {};
 
@@ -19,8 +20,13 @@ const fs = require('node:fs/promises');
     if (results.error)
         return console.error(results.error);
 
-    const output = path.join(__dirname, 'dist');
-    const outputpath = path.join(output, 'dist.min.js');
+    const output = path.join(__dirname, 'build');
+    const outputpath = path.join(output, 'build.min.js');
+
+    try {
+        await fs.rm(output);
+    } catch (ex) {
+    }
 
     try {
         await fs.mkdir(output);
