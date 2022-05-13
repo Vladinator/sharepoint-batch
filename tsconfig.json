@@ -1,0 +1,35 @@
+{
+    "compileOnSave": true,
+    "compilerOptions": {
+        "rootDir": "src",
+        "baseUrl": "src",
+        "downlevelIteration": true,
+        "importHelpers": true,
+        "module": "ES2015",
+        "outDir": "build",
+        "sourceMap": true,
+        "declaration": false,
+        "moduleResolution": "Node",
+        "emitDecoratorMetadata": true,
+        "experimentalDecorators": true,
+        "noImplicitAny": true,
+        "suppressImplicitAnyIndexErrors": true,
+        "target": "ES5",
+        "typeRoots": [
+            "node_modules/@types",
+            "src/typings.d.ts"
+        ],
+        "lib": [
+            "ES2015",
+            "DOM"
+        ],
+        "strict": true,
+        "removeComments": true
+    },
+    "include": [
+        "src/*.ts"
+    ],
+    "exclude": [
+        "node_modules"
+    ]
+}
