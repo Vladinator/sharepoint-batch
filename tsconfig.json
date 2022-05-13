@@ -1,12 +1,11 @@
 {
-    "compileOnSave": true,
     "compilerOptions": {
         "rootDir": "src",
         "baseUrl": "src",
         "downlevelIteration": true,
         "importHelpers": true,
         "module": "ES2015",
-        "outDir": "build",
+        "outDir": "compiled",
         "sourceMap": true,
         "declaration": false,
         "moduleResolution": "Node",
@@ -31,5 +30,6 @@
     ],
     "exclude": [
         "node_modules"
-    ]
+    ],
+    "compileOnSave": false
 }
