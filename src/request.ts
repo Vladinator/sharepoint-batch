@@ -1,16 +1,33 @@
 import { RequestOptions } from './types';
-import { extend } from './utils';
 
-const fallback: Partial<RequestOptions> = { method: 'GET' };
+const SafeCall = (options: RequestOptions, prop: string, response: Response | undefined, ...args: any) => {
+    const value = options[prop] as Function;
+    if (typeof value === 'function')
+        value.call(options, options, response, ...args);
+};
 
-export const Request = async (options: RequestOptions) => {
+export const Request = async (options: RequestOptions): Promise<Response | undefined> => {
 
-    extend(options, fallback);
+    return new Promise(async resolve => {
 
-    const response = await fetch(options.url, options as never);
+        let response: Response | undefined;
 
-    console.warn('Request', options, '->', response.ok, response.status, response.statusText); // DEBUG
+        SafeCall(options, 'before', response);
 
-    return response;
+        try {
+            response = await fetch(options.url, options as never);
+            SafeCall(options, 'progress', response);
+            SafeCall(options, 'done', response);
+        } catch (ex) {
+            console.error(ex);
+            SafeCall(options, 'fail', response);
+        }
+
+        SafeCall(options, 'always', response);
+        SafeCall(options, 'after', response);
+
+        resolve(response);
+
+    });
 
 };

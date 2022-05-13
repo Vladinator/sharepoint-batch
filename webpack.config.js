@@ -4,7 +4,7 @@ const TerserPlugin = require('terser-webpack-plugin');
 module.exports = {
     context: path.resolve(__dirname, 'src'),
     devtool: 'inline-source-map',
-    entry: './test.ts',
+    entry: './index.ts',
     mode: 'development',
     target: ['web', 'es5'],
     module: {
