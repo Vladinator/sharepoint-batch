@@ -1,5 +1,5 @@
-import { RequestOptions } from 'types';
-import { extend } from 'utils';
+import { RequestOptions } from './types';
+import { extend } from './utils';
 
 const fallback: Partial<RequestOptions> = { method: 'GET' };
 
