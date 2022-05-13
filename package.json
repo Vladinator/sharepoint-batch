@@ -1,0 +1,29 @@
+{
+  "name": "sharepoint-batch",
+  "version": "1.0.0",
+  "description": "SharePoint Batch API",
+  "main": "index.js",
+  "scripts": {
+    "build": "tsc && node build.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "dependencies": {
+    "@types/node": "^17.0.33",
+    "node-fetch": "^3.2.4",
+    "tslib": "^2.4.0",
+    "uglify-js": "^3.15.5"
+  },
+  "devDependencies": {
+    "typescript": "^4.6.4"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Vladinator89/sharepoint-batch.git"
+  },
+  "author": "",
+  "license": "SEE LICENSE IN LICENSE",
+  "bugs": {
+    "url": "https://github.com/Vladinator89/sharepoint-batch/issues"
+  },
+  "homepage": "https://github.com/Vladinator89/sharepoint-batch"
+}
