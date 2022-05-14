@@ -1,22 +1,19 @@
-import { RequestOptions } from './types';
-import { RequestResolve } from './request';
+import SharePointBatch from './sharepoint';
 
 (async () => {
 
-    const options: RequestOptions = { method: 'GET', url: window.location.href };
+    const options = SharePointBatch.GetSharePointOptions();
 
-    const requests = [
-        await RequestResolve<Response>(options),
-        await RequestResolve<ArrayBuffer>(options),
-        await RequestResolve<Blob>(options),
-        await RequestResolve<FormData>(options),
-        await RequestResolve<Object>(options),
-        await RequestResolve<String>(options),
-    ];
+    if (!options)
+        return console.error('This code can only run on a SharePoint site.');
 
-    for (let i = 0; i < requests.length; i++) {
-        const request = requests[i];
-        console.warn(typeof request, request);
-    }
+    const spb = new SharePointBatch(options);
+
+    // DEBUG:
+    (window as any).spb = spb;
+    console.warn(await spb.GetWeb({
+        '$expand': 'Lists,Webs',
+        '$select': 'Id,Title,Lists/Id,Lists/Title,Webs/Id,Webs/Title',
+    }));
 
 })();
