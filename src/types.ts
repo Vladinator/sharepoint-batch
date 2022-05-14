@@ -1,3 +1,5 @@
+import { Changeset } from './sharepoint';
+
 export type CallbackOptions = {
     before?: Function;
     done?: Function;
@@ -7,10 +9,12 @@ export type CallbackOptions = {
 
 export type CallbackProps = 'before' | 'done' | 'fail' | 'finally';
 
+export type RequestMethods = 'GET' | 'HEAD' | 'POST' | 'PUT' | 'DELETE' | 'CONNECT' | 'OPTIONS' | 'TRACE' | 'PATCH';
+
 export type RequestOptions = CallbackOptions & RequestInit & {
-    method: 'GET' | 'HEAD' | 'POST' | 'PUT' | 'DELETE' | 'CONNECT' | 'OPTIONS' | 'TRACE' | 'PATCH';
+    method: RequestMethods;
     url: string;
-}
+};
 
 export type RequestResponse = Response | undefined;
 
@@ -20,6 +24,31 @@ export type SharePointOptions = {
 };
 
 export type SharePointParams = Record<string, any> | undefined;
+
+export type BatchJobOptions = RequestOptions & {
+    params?: SharePointParams[];
+};
+
+export type BatchJobHeader = {
+    key: string;
+    value: any;
+};
+
+export type SharePointBatchResponse = ResponseParserPayload[] | string | undefined;
+
+export type ResponseParserHeaders = Record<string, string>;
+
+export type ResponseParserHttp =  {
+    status: number;
+    statusText: string;
+};
+
+export type ResponseParserPayload = {
+    changeset?: Changeset;
+    headers: ResponseParserHeaders;
+    http: ResponseParserHttp;
+    data: any;
+};
 
 export type SPMetadataInfo = {
     type: string;
