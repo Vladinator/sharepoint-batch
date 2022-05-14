@@ -1,39 +1,22 @@
-import { RequestOptions } from 'https';
-import { Request } from './request';
-
-function debug(name: string) {
-    return function(options: RequestOptions, response: Response) {
-        console.warn('debug', name, '|', options, '->', response); // DEBUG
-    }
-}
+import { RequestOptions } from './types';
+import { RequestResolve } from './request';
 
 (async () => {
 
-    const responses = [
-        await Request({
-            method: 'GET',
-            url: 'https://127.0.0.1',
-            before: debug('before'),
-            progress: debug('progress'),
-            done: debug('done'),
-            fail: debug('fail'),
-            always: debug('always'),
-            after: debug('after'),
-        }),
-        await Request({
-            method: 'GET',
-            url: 'http://127.0.0.1',
-            before: debug('before'),
-            progress: debug('progress'),
-            done: debug('done'),
-            fail: debug('fail'),
-            always: debug('always'),
-            after: debug('after'),
-        }),
+    const options: RequestOptions = { method: 'GET', url: window.location.href };
+
+    const requests = [
+        await RequestResolve<Response>(options),
+        await RequestResolve<ArrayBuffer>(options),
+        await RequestResolve<Blob>(options),
+        await RequestResolve<FormData>(options),
+        await RequestResolve<Object>(options),
+        await RequestResolve<String>(options),
     ];
 
-    for (const response of responses) {
-        console.warn(response, '->', response?.ok, response?.status, response?.statusText);
+    for (let i = 0; i < requests.length; i++) {
+        const request = requests[i];
+        console.warn(typeof request, request);
     }
 
 })();
