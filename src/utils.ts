@@ -1,6 +1,8 @@
+import { CallbackProps, RequestOptions } from './types';
+
 export const isArray = (object: any) => Array.isArray(object);
 
-export const isObject = (object: any, plainObject: boolean = false) => object && typeof object === 'object' && (!plainObject || !isArray(object));
+export const isObject = (object: any, plainObject: boolean = false): boolean => object && typeof object === 'object' && (!plainObject || !isArray(object));
 
 export const isString = (object: any) => typeof object === 'string';
 
@@ -63,4 +65,17 @@ export const toParams = (object: any): string => {
 
     return `${paramPrefix}${params}`;
 
+};
+
+export const createGUID = (): string => {
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c: string) => {
+        const r = Math.random() * 16 | 0;
+        return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16);
+    });
+};
+
+export const safeCall = (options: RequestOptions, prop: CallbackProps, ...args: any) => {
+    const value = options[prop];
+    if (typeof value === 'function')
+        value.call(null, options, ...args);
 };

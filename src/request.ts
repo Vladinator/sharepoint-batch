@@ -1,26 +1,25 @@
-import { CallbackProps, RequestOptions, RequestResponse } from './types';
-
-const SafeCall = (options: RequestOptions, prop: CallbackProps, response: RequestResponse, ...args: any) => {
-    const value = options[prop];
-    if (typeof value === 'function')
-        value.call(null, options, response, ...args);
-};
+import { RequestOptions, RequestResponse } from './types';
+import { safeCall } from './utils';
 
 export const Request = async (options: RequestOptions): Promise<RequestResponse> => {
 
     return new Promise(async resolve => {
 
         let response: RequestResponse;
-        SafeCall(options, 'before', response);
+        safeCall(options, 'before', response);
 
         try {
             response = await fetch(options.url, options as never);
-            SafeCall(options, 'done', response);
+            if (response && response.ok) {
+                safeCall(options, 'done', response);
+            } else {
+                safeCall(options, 'fail', response, response?.status, response?.statusText);
+            }
         } catch (ex: any) {
-            SafeCall(options, 'fail', response, ex);
+            safeCall(options, 'fail', response, ex);
         }
 
-        SafeCall(options, 'finally', response);
+        safeCall(options, 'finally', response);
         resolve(response);
 
     });
