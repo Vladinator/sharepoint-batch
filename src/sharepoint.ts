@@ -73,6 +73,7 @@ class ResponseParser {
                 temp = {
                     headers: {},
                     http: { status: 0, statusText: '' },
+                    ok: false,
                     data: null,
                 };
 
@@ -99,6 +100,7 @@ class ResponseParser {
                         const http = line.match(ResponseParser.BatchResponse3);
                         cwo.http.status = http && parseInt(http[1], 10) || 0;
                         cwo.http.statusText = http && http[2] || '';
+                        cwo.ok = cwo.http.status >= 200 && cwo.http.status < 300;
                         level = parseLevels.REQUEST_HEADERS;
 
                     }
@@ -113,7 +115,8 @@ class ResponseParser {
 
                     if (parts) {
 
-                        const key = parts.shift()?.trim();
+                        const rawHeader = parts.shift();
+                        const key = rawHeader && rawHeader.trim();
 
                         if (key && cwo)
                             cwo.headers[key] = parts.join(ResponseParser.HeaderKVSeparatorChar).trim();
@@ -142,6 +145,12 @@ class ResponseParser {
 
             }
 
+        }
+
+        if (!results.length) {
+            const safeParse = ResponseParser.SafeParse(raw);
+            if (safeParse && safeParse !== raw)
+                return safeParse;
         }
 
         return results;
@@ -390,6 +399,95 @@ class BatchJob {
 
     }
 
+    /** @internal */
+    getSendOptions(batch: SharePointBatch, options?: RequestOptions): RequestOptions {
+
+        const batchOptions = batch._options;
+
+        //@ts-expect-error
+        const fallback: RequestOptions = extend({}, FallbackRequestOptions, batchOptions, options);
+
+        const guid = createGUID();
+
+        fallback.url = `${batchOptions.url}/_api/$batch`;
+
+        if (fallback.headers) {
+            extend(fallback.headers, {
+                'Content-Type': `multipart/mixed; boundary="batch_${guid}"`,
+                'X-RequestDigest': batchOptions.digest,
+            });
+        }
+
+        fallback.body = `${this.getPayload(guid)}\r\n--batch_${guid}--`;
+
+        return fallback;
+
+    }
+
+    /** @internal */
+    async send(batch: SharePointBatch, options?: RequestOptions): Promise<SharePointBatchResponse> {
+
+        const changesets = this._changesets;
+        changesets.forEach(changeset => safeCall(changeset._options, 'before', changeset));
+
+        const safeError = (...args: any): undefined => {
+            changesets.forEach(changeset => safeCall(changeset._options, 'fail', changeset, ...args));
+            changesets.forEach(changeset => safeCall(changeset._options, 'finally', changeset));
+            return;
+        };
+
+        const safeFinally = () => {
+            changesets.forEach(changeset => safeCall(changeset._options, 'finally', changeset));
+        };
+
+        const fallback: RequestOptions = this.getSendOptions(batch, options);
+
+        //@ts-expect-error
+        const backup: RequestOptions = extend({}, fallback);
+
+        let delayedDone = false;
+        let delayedFail = false;
+        fallback.done = () => delayedDone = true;
+        fallback.fail = () => delayedFail = true;
+
+        const response = await Request(fallback);
+
+        if (!response) {
+            if (delayedFail)
+                safeCall(backup, 'fail', response);
+            safeError();
+            return;
+        }
+
+        const payload = await response.text();
+
+        if (!payload || !response.ok) {
+            const safePayload = ResponseParser.SafeParse(payload);
+            if (delayedFail)
+                safeCall(backup, 'fail', response, safePayload, response.status, response.statusText);
+            safeError(safePayload, response.status, response.statusText);
+            return;
+        }
+
+        const parsed = ResponseParser.Parse(payload);
+
+        if (!isArray(parsed)) {
+            changesets.forEach(changeset => changeset.processResponsePayload(payload));
+            if (delayedDone)
+                safeCall(backup, 'done', response, payload);
+            safeFinally();
+            return payload;
+        }
+
+        const changesetPayloads = parsed as ResponseParserPayload[];
+        changesets.forEach((changeset, index) => changeset.processResponsePayload(changesetPayloads[index]));
+        if (delayedDone)
+            safeCall(backup, 'done', response, changesetPayloads);
+        safeFinally();
+        return changesetPayloads;
+
+    }
+
 }
 
 /**
@@ -479,96 +577,73 @@ export class SharePointBatch {
         return this._jobs.map(job => job.getPayload(guid)).join('\r\n');
     }
 
-    /** @internal */
-    getSendOptions(options?: RequestOptions): RequestOptions {
+    /**
+     * Process the batch queue. Supports `await` but the results is all the returned data for each changeset.
+     * 
+     * You can assign the `done` and `fail` to the optional argument `options` and they will be called based on estimation given the results of the request.
+     * Since there could be multiple jobs involved, each job will potentially succeed or fail, depending on the changesets submitted to the server.
+     * You'll need to inspect each changeset result and see if it succeeded or failed, if the `SharePointBatchResponse` object is present check the `ok` property for the http status.
+     * @param options Optional `RequestOptions` object.
+     * @returns `Promise` that returns an array of `SharePointBatchResponse` but in case of errors the array item will be `undefined` or a `string` whenever available.
+     */
+    async send(options?: RequestOptions): Promise<SharePointBatchResponse[]> {
 
         //@ts-expect-error
-        const fallback: RequestOptions = extend({}, FallbackRequestOptions, this._options, options);
-
-        const guid = createGUID();
-
-        fallback.url = `${this._options.url}/_api/$batch`;
-
-        if (fallback.headers) {
-            extend(fallback.headers, {
-                'Content-Type': `multipart/mixed; boundary="batch_${guid}"`,
-                'X-RequestDigest': this._options.digest,
-            });
-        }
-
-        fallback.body = `${this.getPayload(guid)}\r\n--batch_${guid}--`;
-
-        return fallback;
-
-    }
-
-    /**
-     * Process the batch queue. Supports `await` but the output is nothing if it fails, otherwise it contains the successfull data from the request.
-     * 
-     * You can assign the `done` and `fail` to the optional argument `options` in order to detect the outcome of the request.
-     * @param options Optional `RequestOptions` object.
-     * @returns `Promise` that either returns a `SharePointBatchResponse` when successfull otherwise nothing.
-     */
-    async send(options?: RequestOptions): Promise<SharePointBatchResponse> {
-
-        const changesets: Changeset[] = this._jobs.reduce((p: Changeset[], c: BatchJob) => { p.push(...c._changesets); return p; }, []);
-        changesets.forEach(changeset => safeCall(changeset._options, 'before', changeset));
-
-        const safeError = (...args: any): undefined => {
-            changesets.forEach(changeset => safeCall(changeset._options, 'fail', changeset, ...args));
-            changesets.forEach(changeset => safeCall(changeset._options, 'finally', changeset));
-            return;
-        };
-
-        const safeFinally = () => {
-            changesets.forEach(changeset => safeCall(changeset._options, 'finally', changeset));
-        };
-
-        const fallback: RequestOptions = this.getSendOptions(options);
+        const fallback: RequestOptions = extend({}, options);
 
         //@ts-expect-error
         const backup: RequestOptions = extend({}, fallback);
 
         let delayedDone = false;
         let delayedFail = false;
-        fallback.done = () => delayedDone = true;
-        fallback.fail = () => delayedFail = true;
+        let delayedArgs: any[] = [];
+        fallback.done = (...args: any[]) => (delayedDone = true, delayedArgs = args);
+        fallback.fail = (...args: any[]) => (delayedFail = true, delayedArgs = args);
 
-        const response = await Request(fallback);
+        const results: SharePointBatchResponse[] = [];
+        let success = 0;
+        let fail = 0;
 
-        if (!response) {
-            if (delayedFail)
-                safeCall(backup, 'fail', response);
-            safeError();
-            return;
+        for (const job of this._jobs) {
+
+            const result = await job.send(this, fallback);
+
+            if (isArray(result)) {
+
+                const safeResult: any = result;
+                success += safeResult.length;
+                results.push(...safeResult);
+
+            } else {
+
+                let count = job._changesets.length;
+                fail += count;
+                while (count-- > 0)
+                    results.push(result);
+
+            }
+
         }
 
-        const payload = await response.text();
-
-        if (!payload || !response.ok) {
-            const safePayload = ResponseParser.SafeParse(payload);
-            if (delayedFail)
-                safeCall(backup, 'fail', response, safePayload, response.status, response.statusText);
-            safeError(safePayload, response.status, response.statusText);
-            return;
+        // if we have all fails we override the done into a fail
+        if (delayedDone && !delayedFail && !success && fail) {
+            delayedDone = false;
+            delayedFail = true;
         }
 
-        const parsed = ResponseParser.Parse(payload);
-
-        if (!isArray(parsed)) {
-            changesets.forEach(changeset => changeset.processResponsePayload(payload));
-            if (delayedDone)
-                safeCall(backup, 'done', response, payload);
-            safeFinally();
-            return payload;
+        // if we have no done or fail it means the queue was empty
+        if (!delayedDone && !delayedFail) {
+            delayedDone = true;
+            delayedArgs[0] = backup;
         }
 
-        const changesetPayloads = parsed as ResponseParserPayload[];
-        changesets.forEach((changeset, index) => changeset.processResponsePayload(changesetPayloads[index]));
-        if (delayedDone)
-            safeCall(backup, 'done', response, changesetPayloads);
-        safeFinally();
-        return changesetPayloads;
+        if (delayedDone) {
+            safeCall(backup, 'done', delayedArgs[1], results);
+        } else if (delayedFail) {
+            safeCall(backup, 'fail', delayedArgs[1], delayedArgs[2], delayedArgs[3], delayedArgs[4]);
+        }
+
+        return results;
 
     }
 

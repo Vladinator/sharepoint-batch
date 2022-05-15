@@ -86,5 +86,6 @@ export type ResponseParserPayload = {
     changeset?: Changeset;
     headers: ResponseParserHeaders;
     http: ResponseParserHttp;
+    ok: boolean;
     data: any;
 };
