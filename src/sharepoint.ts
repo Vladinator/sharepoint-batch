@@ -13,6 +13,7 @@ const FallbackRequestOptions: RequestOptions = {
     headers: {},
 };
 
+/** @internal */
 export class ResponseParser {
 
     static Level = {
@@ -195,9 +196,15 @@ export class ResponseParser {
 
 }
 
+/**
+ * Individual queries are bundled into "changeset" entries.
+ */
 export class Changeset {
 
+    /** @internal */
     _options: BatchJobOptions;
+
+    /** @internal */
     _responsePayload: ResponseParserPayload | string | undefined;
 
     constructor(options: BatchJobOptions) {
@@ -205,14 +212,26 @@ export class Changeset {
         this._options = extend({}, FallbackBatchJobOptions, options);
     }
 
+    /**
+     * Returns the `GET`, `POST`, `...` method.
+     * @returns Request method.
+     */
     getMethod(): RequestMethods {
         return this._options.method;
     }
 
+    /**
+     * Returns the full request URL.
+     * @returns Request URL with any optional params.
+     */
     getUrl() {
         return `${this._options.url}${toParams(this._options.params)}`;
     }
 
+    /**
+     * Returns the headers object for the request.
+     * @returns Request header array.
+     */
     getHeaders(): BatchJobHeader[] {
 
         const headers = this._options.headers;
@@ -228,14 +247,20 @@ export class Changeset {
 
     }
 
+    /** @internal */
     getPayload(): BodyInit | null | undefined {
         return this._options.body;
     }
 
+    /**
+     * Returns the payload from the server once the changeset is queried and processed.
+     * @returns The raw data the server responded with from the request.
+     */
     getResponsePayload() {
         return this._responsePayload;
     }
 
+    /** @internal */
     processResponsePayload(payload: ResponseParserPayload | string | undefined) {
 
         this._responsePayload = payload;
@@ -256,9 +281,16 @@ export class Changeset {
 
 }
 
+/**
+ * Bundles of Changeset objects are lumped into "batch job" entries.
+ * @internal
+ */
 export class BatchJob {
 
+    /** @internal */
     _options: BatchJobOptions;
+
+    /** @internal */
     _changesets: Changeset[];
 
     constructor(options: BatchJobOptions) {
@@ -267,6 +299,11 @@ export class BatchJob {
         this._changesets = [];
     }
 
+    /**
+     * Append a changeset to the changeset queue.
+     * @param changeset An object of `Changeset`.
+     * @returns Successfull additions return the `index` in the queue otherwise `-1`.
+     */
     addChangeset(changeset: Changeset): number {
         if (changeset instanceof Changeset) {
             if (changeset._options.url[0] === '/')
@@ -276,26 +313,7 @@ export class BatchJob {
         return -1;
     }
 
-    removeChangeset(query: Changeset | number): number {
-
-        if (query instanceof Changeset) {
-            const i = this._changesets.indexOf(query);
-            if (i > -1)
-                this._changesets.splice(i, 1);
-            return i;
-        }
-
-        if (typeof query === 'number') {
-            if (!this._changesets[query])
-                return -1;
-            this._changesets.splice(query, 1);
-            return query;
-        }
-
-        return -2;
-
-    }
-
+    /** @internal */
     getPayload(guid: string): string {
 
         const data = [];
@@ -367,31 +385,49 @@ export class BatchJob {
 
 }
 
-export default class SharePointBatch {
+/**
+ * The library entry point class.
+ */
+export class SharePointBatch {
 
-    static Changeset = Changeset;
-    static BatchJob = BatchJob;
-
+    /**
+     * Utility function to extract data from the `window` properties `_spPageContextInfo` and `GetRequestDigest`.
+     * @returns If possible it returns a `SharePointOptions` object otherwise nothing.
+     */
     static GetSharePointOptions(): SharePointOptions | undefined {
 
-        //@ts-expect-error
-        const context: any = window._spPageContextInfo;
+        const win: any = window;
+        const context: any = win._spPageContextInfo;
+        const getDigest: any = win.GetRequestDigest;
 
-        //@ts-expect-error
-        const digest: Function = window.GetRequestDigest;
-
-        if (!isObject(context) || typeof digest !== 'function')
+        if (!isObject(context) || typeof getDigest !== 'function')
             return;
 
-        return {
-            url: context.webAbsoluteUrl,
-            digest: digest(),
-        };
+        let url: any = context.webAbsoluteUrl;
+        let digest: any;
+
+        try {
+            digest = getDigest();
+        } catch (ex: any) {
+        }
+
+        if (!isString(url))
+            url = '';
+
+        if (!isString(digest))
+            digest = '';
+
+        return { url, digest };
 
     }
 
+    /** @internal */
     _options: SharePointOptions;
+
+    /** @internal */
     _jobs: BatchJob[];
+
+    /** @internal */
     _job: BatchJob | undefined;
 
     constructor(options: SharePointOptions) {
@@ -399,45 +435,7 @@ export default class SharePointBatch {
         this._jobs = [];
     }
 
-    GetRequestOptions(url: string | RequestOptions): RequestOptions {
-
-        const options: RequestOptions = {
-            method: 'GET',
-            url: '',
-            headers: {
-                'Accept': 'application/json;odata=verbose',
-                'Content-Type': 'application/json;odata=verbose',
-            },
-        };
-
-        if (isObject(url)) {
-
-            //@ts-expect-error
-            if (isObject(url.headers)) {
-                //@ts-expect-error
-                extend(options.headers, url.headers);
-            }
-
-            extend(options, url);
-
-        } else if (isString(url)) {
-
-            //@ts-expect-error
-            options.url = url;
-
-        }
-
-        return options;
-
-    }
-
-    async QueryEndpoint<T>(url: string): Promise<T | undefined> {
-        const options = this.GetRequestOptions(url);
-        const payload = await RequestJson(options);
-        if (payload)
-            return payload.d;
-    }
-
+    /** @internal */
     appendNewJob(options?: BatchJobOptions): BatchJob {
 
         //@ts-expect-error
@@ -450,26 +448,29 @@ export default class SharePointBatch {
 
     }
 
+    /** @internal */
     getActiveJob(): BatchJob {
         if (!this._job)
             return this.appendNewJob();
         return this._job;
     }
 
-    addChangeset(changeset: Changeset): number {
+    /**
+     * Append a changeset to the batch queue.
+     * @param changeset Object instance of `Changeset`.
+     * @returns `true` if the changeset was added otherwise `false`.
+     */
+    addChangeset(changeset: Changeset): boolean {
         const job = this.getActiveJob();
-        return job.addChangeset(changeset);
+        return job.addChangeset(changeset) > -1;
     }
 
-    removeChangeset(query: Changeset | number): number {
-        const job = this.getActiveJob();
-        return job.removeChangeset(query);
-    }
-
+    /** @internal */
     getPayload(guid: string): string {
         return this._jobs.map(job => job.getPayload(guid)).join('\r\n');
     }
 
+    /** @internal */
     getSendOptions(options?: RequestOptions): RequestOptions {
 
         //@ts-expect-error
@@ -492,6 +493,13 @@ export default class SharePointBatch {
 
     }
 
+    /**
+     * Process the batch queue. Supports `await` but the output is nothing if it fails, otherwise it contains the successfull data from the request.
+     * 
+     * You can assign the `done` and `fail` to the optional argument `options` in order to detect the outcome of the request.
+     * @param options Optional `RequestOptions` object.
+     * @returns `Promise` that either returns a `SharePointBatchResponse` when successfull otherwise nothing.
+     */
     async send(options?: RequestOptions): Promise<SharePointBatchResponse> {
 
         const changesets: Changeset[] = this._jobs.reduce((p: Changeset[], c: BatchJob) => { p.push(...c._changesets); return p; }, []);
