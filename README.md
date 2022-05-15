@@ -1,22 +1,33 @@
 # SharePointBatch
-Inspiration drawn from this article:
-https://msdn.microsoft.com/en-us/library/office/dn903506.aspx
+Inspiration drawn from the MSDN article ["Make batch requests with the REST APIs"](https://msdn.microsoft.com/en-us/library/office/dn903506.aspx)
 
-This Javascript library is supposed to help developers efficiently build batch jobs and parsing the response from the server. The reason I made this was that the existing code provided by Microsoft seemed a bit underwhelming and too specific, while there is a need for a more general library that everyone could use in their projects.
+This Javascript library is supposed to help developers efficiently build batch jobs and parsing the response from the server. The reason I made this was that the existing code provided by Microsoft seemed a bit underwhelming and the examples were too specific. There is a need for a general purpose library to utilize the API in existing projects.
 
-## Important
-Please note that this library is still a work in progress. At this stage this is merely a research project to better understand the new batch support for SharePoint. I am still willing to share my findings in hope that it helps someone out, or perhaps even inspires others to create their own libraries, more complete than what I have written here. :)
+Please note that this library is a work in progress. It's a mix between a research project and experimenting writing typescript to compile into JavaScript to then be used in other projects.
 
 ## Compatibility
-Tested with Office 365 running SharePoint 2016 with the following browsers:
-- Chrome 45
-- Firefox 40
-- Internet Explorer 11
-- Opera 32
-- Safari 5
+Built to target ES5 compatible browsers.
 
-## Dependencies
-No external libraries are required. A version of SharePoint with support for /_api/$batch
+## API
+Full documentation can be created by building the project and looking in the `docs` folder.
 
-## Examples
-You can find these appended at the end of the batch.js script.
+```javascript
+// the options object contains the properties `url` (hostweb) and `digest` (security)
+const options = SharePointBatch.GetSharePointOptions();
+// create a batch instance
+const batch = new SharePointBatch(options);
+// append jobs to the batch
+batch.addChangeset(new SharePointBatch.Changeset({ method: 'POST', url: '/_api/ContextInfo' }));
+batch.addChangeset(new SharePointBatch.Changeset({ method: 'GET', url: '/_api/Site', params: { '$select': 'Id, Url, ReadOnly, WriteLocked' } }));
+batch.addChangeset(new SharePointBatch.Changeset({ method: 'GET', url: '/_api/Web', params: { '$select': 'Id, Title, WebTemplate, Created' } }));
+// query the server for results
+batch.send({
+    done: function(options, response, results) { console.warn('Done!', results); },
+    fail: function(options, response, error) { console.error('Fail!', error); },
+});
+```
+
+## Scripts
+- `npm run build`
+- `npm run build-src`
+- `npm run build-docs`
