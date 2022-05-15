@@ -26,52 +26,12 @@ export const Request = async (options: RequestOptions): Promise<RequestResponse>
 
 };
 
-export const RequestArrayBuffer = async (options: RequestOptions): Promise<ArrayBuffer | undefined> => {
-    const response = await Request(options);
-    if (!response)
-        return;
-    try {
-        return await response.arrayBuffer();
-    } catch (ex) {
-    }
-};
-
-export const RequestBlob = async (options: RequestOptions): Promise<Blob | undefined> => {
-    const response = await Request(options);
-    if (!response)
-        return;
-    try {
-        return await response.blob();
-    } catch (ex) {
-    }
-};
-
-export const RequestFormData = async (options: RequestOptions): Promise<FormData | undefined> => {
-    const response = await Request(options);
-    if (!response)
-        return;
-    try {
-        return await response.formData();
-    } catch (ex) {
-    }
-};
-
 export const RequestJson = async (options: RequestOptions): Promise<any | undefined> => {
     const response = await Request(options);
     if (!response)
         return;
     try {
         return await response.json();
-    } catch (ex) {
-    }
-};
-
-export const RequestText = async (options: RequestOptions): Promise<string | undefined> => {
-    const response = await Request(options);
-    if (!response)
-        return;
-    try {
-        return await response.text();
     } catch (ex) {
     }
 };

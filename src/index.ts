@@ -1,7 +1,7 @@
-import SharePointBatch from './sharepoint';
+import { Changeset, BatchJob, SharePointBatch } from './sharepoint';
 
-((window: any) => {
-
+((window: any, SharePointBatch: any) => {
+    SharePointBatch.Changeset = Changeset;
+    SharePointBatch.BatchJob = BatchJob;
     window.SharePointBatch = SharePointBatch;
-
-})(window);
+})(window, SharePointBatch);
