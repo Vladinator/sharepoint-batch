@@ -14,7 +14,7 @@ const FallbackRequestOptions: RequestOptions = {
 };
 
 /** @internal */
-export class ResponseParser {
+class ResponseParser {
 
     static Level = {
         UNKNOWN: 0,
@@ -285,7 +285,9 @@ export class Changeset {
  * Bundles of Changeset objects are lumped into "batch job" entries.
  * @internal
  */
-export class BatchJob {
+class BatchJob {
+
+    static NumMaxChangesets = 100;
 
     /** @internal */
     _options: BatchJobOptions;
@@ -297,6 +299,11 @@ export class BatchJob {
         //@ts-expect-error
         this._options = extend({}, FallbackBatchJobOptions, options);
         this._changesets = [];
+    }
+
+    /** @ignore */
+    isChangesetsFull() {
+        return this._changesets.length >= BatchJob.NumMaxChangesets;
     }
 
     /**
@@ -461,7 +468,9 @@ export class SharePointBatch {
      * @returns `true` if the changeset was added otherwise `false`.
      */
     addChangeset(changeset: Changeset): boolean {
-        const job = this.getActiveJob();
+        let job = this.getActiveJob();
+        if (job.isChangesetsFull())
+            job = this.appendNewJob();
         return job.addChangeset(changeset) > -1;
     }
 
