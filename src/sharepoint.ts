@@ -1,6 +1,6 @@
-import { RequestMethods, RequestOptions, SharePointOptions, BatchJobOptions, BatchJobHeader, SharePointBatchResponse, ResponseParserPayload } from './types';
+import { RequestMethods, RequestOptions, SharePointOptions, BatchJobOptions, BatchJobHeader, SharePointBatchJobResponse, ResponseParserPayload, SharePointBatchResponse, SharePointBatchResponseSuccess, SharePointBatchResponseError } from './types';
 import { isArray, isObject, isString, extend, toParams, createGUID, safeCall } from './utils';
-import { Request, RequestJson } from './request';
+import { Request } from './request';
 
 const FallbackBatchJobOptions: BatchJobOptions = {
     method: 'GET',
@@ -100,7 +100,7 @@ class ResponseParser {
                         const http = line.match(ResponseParser.BatchResponse3);
                         cwo.http.status = http && parseInt(http[1], 10) || 0;
                         cwo.http.statusText = http && http[2] || '';
-                        cwo.ok = cwo.http.status >= 200 && cwo.http.status < 300;
+                        cwo.ok = (cwo.http.status / 100 | 0) === 2;
                         level = parseLevels.REQUEST_HEADERS;
 
                     }
@@ -211,14 +211,18 @@ class ResponseParser {
 export class Changeset {
 
     /** @internal */
-    _options: BatchJobOptions;
+    #options: BatchJobOptions;
 
     /** @internal */
-    _responsePayload: ResponseParserPayload | string | undefined;
+    #responsePayload: ResponseParserPayload | string | undefined;
 
     constructor(options: BatchJobOptions) {
         //@ts-expect-error
-        this._options = extend({}, FallbackBatchJobOptions, options);
+        this.#options = extend({}, FallbackBatchJobOptions, options);
+    }
+
+    getOptions() {
+        return this.#options;
     }
 
     /**
@@ -226,7 +230,7 @@ export class Changeset {
      * @returns Request method.
      */
     getMethod(): RequestMethods {
-        return this._options.method;
+        return this.#options.method;
     }
 
     /**
@@ -234,7 +238,7 @@ export class Changeset {
      * @returns Request URL with any optional params.
      */
     getUrl() {
-        return `${this._options.url}${toParams(this._options.params)}`;
+        return `${this.#options.url}${toParams(this.#options.params)}`;
     }
 
     /**
@@ -243,7 +247,7 @@ export class Changeset {
      */
     getHeaders(): BatchJobHeader[] {
 
-        const headers = this._options.headers;
+        const headers = this.#options.headers;
         const results: BatchJobHeader[] = [];
 
         if (isObject(headers)) {
@@ -258,7 +262,7 @@ export class Changeset {
 
     /** @internal */
     getPayload(): BodyInit | null | undefined {
-        return this._options.body;
+        return this.#options.body;
     }
 
     /**
@@ -266,26 +270,12 @@ export class Changeset {
      * @returns The raw data the server responded with from the request.
      */
     getResponsePayload() {
-        return this._responsePayload;
+        return this.#responsePayload;
     }
 
     /** @internal */
-    processResponsePayload(payload: ResponseParserPayload | string | undefined) {
-
-        this._responsePayload = payload;
-
-        const isPayload = isObject(payload);
-        const safePayload = isPayload ? payload as ResponseParserPayload : null;
-        const statusDigit = safePayload ? safePayload.http.status / 100 | 0 : 0;
-
-        if (safePayload)
-            safePayload.changeset = this;
-
-        if (statusDigit !== 2)
-            safeCall(this._options, 'fail', this, payload);
-        else
-            safeCall(this._options, 'done', this, payload);
-
+    setResponsePayload(payload: ResponseParserPayload | string | undefined) {
+        this.#responsePayload = payload;
     }
 
 }
@@ -299,20 +289,28 @@ class BatchJob {
     static NumMaxChangesets = 100;
 
     /** @internal */
-    _options: BatchJobOptions;
+    #options: BatchJobOptions;
 
     /** @internal */
-    _changesets: Changeset[];
+    #changesets: Changeset[];
 
     constructor(options: BatchJobOptions) {
         //@ts-expect-error
-        this._options = extend({}, FallbackBatchJobOptions, options);
-        this._changesets = [];
+        this.#options = extend({}, FallbackBatchJobOptions, options);
+        this.#changesets = [];
+    }
+
+    getOptions() {
+        return this.#options;
+    }
+
+    getChangesets() {
+        return this.#changesets;
     }
 
     /** @ignore */
     isChangesetsFull() {
-        return this._changesets.length >= BatchJob.NumMaxChangesets;
+        return this.#changesets.length >= BatchJob.NumMaxChangesets;
     }
 
     /**
@@ -322,9 +320,10 @@ class BatchJob {
      */
     addChangeset(changeset: Changeset): number {
         if (changeset instanceof Changeset) {
-            if (changeset._options.url[0] === '/')
-                changeset._options.url = `${this._options.url}${changeset._options.url}`;
-            return this._changesets.push(changeset) - 1;
+            const options = changeset.getOptions();
+            if (options.url[0] === '/')
+                options.url = `${this.#options.url}${options.url}`;
+            return this.#changesets.push(changeset) - 1;
         }
         return -1;
     }
@@ -334,7 +333,7 @@ class BatchJob {
 
         const data = [];
 
-        for (const changeset of this._changesets) {
+        for (const changeset of this.#changesets) {
 
             const method = changeset.getMethod();
             const boundary = method === 'GET' ? null : `changeset_${createGUID()}`;
@@ -400,9 +399,9 @@ class BatchJob {
     }
 
     /** @internal */
-    getSendOptions(batch: SharePointBatch, options?: RequestOptions): RequestOptions {
+    #getSendOptions(batch: SharePointBatch, options?: RequestOptions): RequestOptions {
 
-        const batchOptions = batch._options;
+        const batchOptions = batch.getOptions();
 
         //@ts-expect-error
         const fallback: RequestOptions = extend({}, FallbackRequestOptions, batchOptions, options);
@@ -425,22 +424,43 @@ class BatchJob {
     }
 
     /** @internal */
-    async send(batch: SharePointBatch, options?: RequestOptions): Promise<SharePointBatchResponse> {
+    #processResponsePayload(changeset: Changeset, payload: ResponseParserPayload | string | undefined) {
 
-        const changesets = this._changesets;
-        changesets.forEach(changeset => safeCall(changeset._options, 'before', changeset));
+        changeset.setResponsePayload(payload);
+
+        const isPayload = isObject(payload);
+        const safePayload = isPayload ? payload as ResponseParserPayload : null;
+        const ok = (safePayload ? safePayload.http.status / 100 | 0 : 0) === 2;
+
+        if (safePayload)
+            safePayload.changeset = changeset;
+
+        const options = changeset.getOptions();
+
+        if (ok)
+            safeCall(options, 'fail', changeset, payload);
+        else
+            safeCall(options, 'done', changeset, payload);
+
+    }
+
+    /** @internal */
+    async send(batch: SharePointBatch, options?: RequestOptions): Promise<SharePointBatchJobResponse> {
+
+        const changesets = this.#changesets;
+        changesets.forEach(changeset => safeCall(changeset.getOptions(), 'before', changeset));
 
         const safeError = (...args: any): undefined => {
-            changesets.forEach(changeset => safeCall(changeset._options, 'fail', changeset, ...args));
-            changesets.forEach(changeset => safeCall(changeset._options, 'finally', changeset));
+            changesets.forEach(changeset => safeCall(changeset.getOptions(), 'fail', changeset, ...args));
+            changesets.forEach(changeset => safeCall(changeset.getOptions(), 'finally', changeset));
             return;
         };
 
         const safeFinally = () => {
-            changesets.forEach(changeset => safeCall(changeset._options, 'finally', changeset));
+            changesets.forEach(changeset => safeCall(changeset.getOptions(), 'finally', changeset));
         };
 
-        const fallback: RequestOptions = this.getSendOptions(batch, options);
+        const fallback: RequestOptions = this.#getSendOptions(batch, options);
 
         //@ts-expect-error
         const backup: RequestOptions = extend({}, fallback);
@@ -472,7 +492,7 @@ class BatchJob {
         const parsed = ResponseParser.Parse(payload);
 
         if (!isArray(parsed)) {
-            changesets.forEach(changeset => changeset.processResponsePayload(payload));
+            changesets.forEach(changeset => this.#processResponsePayload(changeset, payload));
             if (delayedDone)
                 safeCall(backup, 'done', response, payload);
             safeFinally();
@@ -480,7 +500,7 @@ class BatchJob {
         }
 
         const changesetPayloads = parsed as ResponseParserPayload[];
-        changesets.forEach((changeset, index) => changeset.processResponsePayload(changesetPayloads[index]));
+        changesets.forEach((changeset, index) => this.#processResponsePayload(changeset, changesetPayloads[index]));
         if (delayedDone)
             safeCall(backup, 'done', response, changesetPayloads);
         safeFinally();
@@ -527,37 +547,41 @@ export class SharePointBatch {
     }
 
     /** @internal */
-    _options: SharePointOptions;
+    #options: SharePointOptions;
 
     /** @internal */
-    _jobs: BatchJob[];
+    #jobs: BatchJob[];
 
     /** @internal */
-    _job: BatchJob | undefined;
+    #job: BatchJob | undefined;
 
     constructor(options: SharePointOptions) {
-        this._options = options;
-        this._jobs = [];
+        this.#options = options;
+        this.#jobs = [];
+    }
+
+    getOptions() {
+        return this.#options;
     }
 
     /** @internal */
-    appendNewJob(options?: BatchJobOptions): BatchJob {
+    #appendNewJob(options?: BatchJobOptions): BatchJob {
 
         //@ts-expect-error
-        const fallback: BatchJobOptions = extend({}, FallbackBatchJobOptions, this._options, options);
+        const fallback: BatchJobOptions = extend({}, FallbackBatchJobOptions, this.#options, options);
 
-        this._job = new BatchJob(fallback);
-        this._jobs.push(this._job);
+        this.#job = new BatchJob(fallback);
+        this.#jobs.push(this.#job);
 
-        return this._job;
+        return this.#job;
 
     }
 
     /** @internal */
-    getActiveJob(): BatchJob {
-        if (!this._job)
-            return this.appendNewJob();
-        return this._job;
+    #getActiveJob(): BatchJob {
+        if (!this.#job)
+            return this.#appendNewJob();
+        return this.#job;
     }
 
     /**
@@ -566,15 +590,10 @@ export class SharePointBatch {
      * @returns `true` if the changeset was added otherwise `false`.
      */
     addChangeset(changeset: Changeset): boolean {
-        let job = this.getActiveJob();
+        let job = this.#getActiveJob();
         if (job.isChangesetsFull())
-            job = this.appendNewJob();
+            job = this.#appendNewJob();
         return job.addChangeset(changeset) > -1;
-    }
-
-    /** @internal */
-    getPayload(guid: string): string {
-        return this._jobs.map(job => job.getPayload(guid)).join('\r\n');
     }
 
     /**
@@ -586,7 +605,7 @@ export class SharePointBatch {
      * @param options Optional `RequestOptions` object.
      * @returns `Promise` that returns an array of `SharePointBatchResponse` but in case of errors the array item will be `undefined` or a `string` whenever available.
      */
-    async send(options?: RequestOptions): Promise<SharePointBatchResponse[]> {
+    async send(options?: RequestOptions): Promise<SharePointBatchResponse> {
 
         //@ts-expect-error
         const fallback: RequestOptions = extend({}, options);
@@ -600,11 +619,11 @@ export class SharePointBatch {
         fallback.done = (...args: any[]) => (delayedDone = true, delayedArgs = args);
         fallback.fail = (...args: any[]) => (delayedFail = true, delayedArgs = args);
 
-        const results: SharePointBatchResponse[] = [];
+        const results: SharePointBatchJobResponse[] = [];
         let success = 0;
         let fail = 0;
 
-        for (const job of this._jobs) {
+        for (const job of this.#jobs) {
 
             const result = await job.send(this, fallback);
 
@@ -616,7 +635,7 @@ export class SharePointBatch {
 
             } else {
 
-                let count = job._changesets.length;
+                let count = job.getChangesets().length;
                 fail += count;
                 while (count-- > 0)
                     results.push(result);
@@ -638,12 +657,18 @@ export class SharePointBatch {
         }
 
         if (delayedDone) {
+
             safeCall(backup, 'done', delayedArgs[1], results);
+
         } else if (delayedFail) {
+
             safeCall(backup, 'fail', delayedArgs[1], delayedArgs[2], delayedArgs[3], delayedArgs[4]);
+
+            return { error: true, ok: false, results: delayedArgs[2] } as SharePointBatchResponseError;
+
         }
 
-        return results;
+        return { success: true, ok: true, results } as SharePointBatchResponseSuccess;
 
     }
 

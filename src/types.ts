@@ -62,9 +62,32 @@ export type BatchJobHeader = {
 };
 
 /**
- * A batch response is either an array of payload records, a string or nothing.
+ * A batch job response is either an array of payload records, a string or nothing.
  */
-export type SharePointBatchResponse = ResponseParserPayload[] | string | undefined;
+export type SharePointBatchJobResponse = ResponseParserPayload[] | string | undefined;
+
+/**
+ * A batch response is either the success or error object.
+ */
+export type SharePointBatchResponse = SharePointBatchResponseSuccess | SharePointBatchResponseError;
+
+/**
+ * A changeset response success.
+ */
+export type SharePointBatchResponseSuccess = {
+    success: true;
+    ok: boolean;
+    results: SharePointBatchJobResponse[];
+};
+
+/**
+ * A changeset response error.
+ */
+export type SharePointBatchResponseError = {
+    error: true;
+    ok: boolean;
+    results: any;
+};
 
 /**
  * Request response header record.

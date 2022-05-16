@@ -14,13 +14,13 @@
         "allowSyntheticDefaultImports": true,
         "noImplicitAny": true,
         "suppressImplicitAnyIndexErrors": true,
-        "target": "ES5",
+        "target": "ES6",
         "typeRoots": [
             "node_modules/@types",
             "src/typings.d.ts"
         ],
         "lib": [
-            "ES5",
+            "ES6",
             "DOM"
         ],
         "strict": true,

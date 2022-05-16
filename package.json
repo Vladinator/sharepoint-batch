@@ -2,7 +2,8 @@
   "name": "sharepoint-batch",
   "version": "1.0.0",
   "description": "SharePoint Batch API",
-  "main": "index.js",
+  "main": "./src/sharepoint.ts",
+  "typings": "./src/sharepoint.ts",
   "scripts": {
     "build": "npm run build-src && npm run build-docs",
     "build-src": "node ./node_modules/webpack-cli/bin/cli.js",

@@ -5,27 +5,37 @@ This Javascript library is supposed to help developers efficiently build batch j
 
 Please note that this library is a work in progress. It's a mix between a research project and experimenting writing typescript to compile into JavaScript to then be used in other projects.
 
-## Compatibility
-Built to target ES5 compatible browsers.
-
 ## API
-Full documentation can be created by building the project and looking in the `docs` folder.
+The project can be loaded as both a module and a javascript browser script.
+
+### TypeScript
+You can import the package as a module. You will need to specify the url and digest manually.
+
+```typescript
+import { SharePointBatch, Changeset } from 'sharepoint-batch';
+const batch = new SharePointBatch({ url: 'https://my.sharepoint.com', digest: '...' });
+batch.addChangeset(new Changeset({ method: 'POST', url: '/_api/ContextInfo' }));
+batch.addChangeset(new Changeset({ method: 'GET', url: '/_api/Site', params: { '$select': 'Id, Url, ReadOnly, WriteLocked' } }));
+batch.addChangeset(new Changeset({ method: 'GET', url: '/_api/Web', params: { '$select': 'Id, Title, WebTemplate, Created' } }));
+const response = await batch.send();
+console.log(response.ok ? 'Done!' : 'Fail!', response.results);
+```
+
+### JavaScript
+The pre-built `build.min.js` file can be loaded directly into a ES6 compatible browser.
 
 ```javascript
-// the options object contains the properties `url` (hostweb) and `digest` (security)
 const options = SharePointBatch.GetSharePointOptions();
-// create a batch instance
 const batch = new SharePointBatch(options);
-// append jobs to the batch
 batch.addChangeset(new SharePointBatch.Changeset({ method: 'POST', url: '/_api/ContextInfo' }));
 batch.addChangeset(new SharePointBatch.Changeset({ method: 'GET', url: '/_api/Site', params: { '$select': 'Id, Url, ReadOnly, WriteLocked' } }));
 batch.addChangeset(new SharePointBatch.Changeset({ method: 'GET', url: '/_api/Web', params: { '$select': 'Id, Title, WebTemplate, Created' } }));
-// query the server for results
-batch.send({
-    done: function(options, response, results) { console.warn('Done!', results); },
-    fail: function(options, response, error) { console.error('Fail!', error); },
-});
+const response = await batch.send();
+console.log(response.ok ? 'Done!' : 'Fail!', response.results);
 ```
+
+### Documentation
+Full documentation can be created by building the project and looking in the `docs` folder.
 
 ## Scripts
 - `npm run build`
