@@ -4,22 +4,30 @@
   "description": "SharePoint Batch API",
   "main": "./src/sharepoint.ts",
   "typings": "./src/sharepoint.ts",
+  "directories": {
+    "src": "./src",
+    "test": "./test"
+  },
   "scripts": {
     "build": "npm run build-src && npm run build-docs",
     "build-src": "node ./node_modules/webpack-cli/bin/cli.js",
     "build-docs": "node ./node_modules/typedoc/bin/typedoc --excludeInternal --out ./docs ./src/types.ts ./src/sharepoint.ts",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "node ./node_modules/mocha/bin/mocha"
   },
   "dependencies": {
     "@types/node": "^17.0.33",
     "tslib": "^2.4.0"
   },
   "devDependencies": {
+    "@testdeck/mocha": "^0.2.0",
+    "@types/mocha": "^9.1.1",
+    "mocha": "^10.0.0",
     "ts-loader": "^9.3.0",
+    "ts-node": "^10.7.0",
+    "typedoc": "^0.22.15",
     "typescript": "^4.6.4",
     "webpack": "^5.72.1",
-    "webpack-cli": "^4.9.2",
-    "typedoc": "^0.22.15"
+    "webpack-cli": "^4.9.2"
   },
   "repository": {
     "type": "git",

@@ -2,7 +2,7 @@ import { CallbackProps, RequestOptions, BatchJobOptions, SharePointBatchOptions 
 
 export const isArray = (object: any) => Array.isArray(object);
 
-export const isObject = (object: any, plainObject: boolean = false): boolean => object && typeof object === 'object' && (!plainObject || !isArray(object));
+export const isObject = (object: any, plainObject: boolean = false): boolean => !!(object && typeof object === 'object' && (!plainObject || !isArray(object)));
 
 export const isString = (object: any) => typeof object === 'string';
 

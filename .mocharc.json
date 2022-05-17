@@ -1,0 +1,22 @@
+{
+    "extension": [
+        "ts"
+    ],
+    "spec": "./test/*.ts",
+    "require": [
+        "source-map-support/register",
+        "ts-node/register"
+    ],
+    "diff": true,
+    "package": "./package.json",
+    "reporter": "spec",
+    "slow": "75",
+    "timeout": "2000",
+    "ui": "bdd",
+    "watch-files": [
+        "test/**/*.ts"
+    ],
+    "watch-ignore": [
+        "lib/vendor"
+    ]
+}
