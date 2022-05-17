@@ -606,11 +606,44 @@ export class SharePointBatch {
      * @param changeset Object instance of `Changeset`.
      * @returns `true` if the changeset was added otherwise `false`.
      */
-    addChangeset(changeset: Changeset): boolean {
+    add(changeset: Changeset): boolean {
         let job = this.#getActiveJob();
         if (job.isChangesetsFull())
             job = this.#appendNewJob();
+        for (const j of this.#jobs)
+            if (j.getChangesets().indexOf(changeset) > -1)
+                return false;
         return job.addChangeset(changeset) > -1;
+    }
+
+    /**
+     * Remove a changeset from the batch queue.
+     * @param changeset Object instance of `Changeset`.
+     * @returns `true` if the changeset was removed otherwise `false`.
+     */
+    remove(changeset: Changeset): boolean {
+        for (const job of this.#jobs) {
+            const changesets = job.getChangesets();
+            const i = changesets.indexOf(changeset);
+            if (i === -1)
+                continue;
+            changesets.splice(i, 1);
+            return true;
+        }
+        return false;
+    }
+
+    /**
+     * Remove all changesets from the batch queue.
+     */
+    clear() {
+        this.#jobs.forEach(job => {
+            const changesets = job.getChangesets();
+            changesets.splice(0, changesets.length);
+        });
+        while (this.#jobs.length > 1)
+            this.#jobs.pop();
+        this.#job = this.#jobs[0];
     }
 
     /**

@@ -14,9 +14,9 @@ You can import the package as a module. You will need to specify the url and dig
 ```typescript
 import { SharePointBatch, Changeset } from 'sharepoint-batch';
 const batch = new SharePointBatch({ url: 'https://my.sharepoint.com', digest: '...' });
-batch.addChangeset(new Changeset({ method: 'POST', url: '/_api/ContextInfo' }));
-batch.addChangeset(new Changeset({ method: 'GET', url: '/_api/Site', params: { '$select': 'Id, Url, ReadOnly, WriteLocked' } }));
-batch.addChangeset(new Changeset({ method: 'GET', url: '/_api/Web', params: { '$select': 'Id, Title, WebTemplate, Created' } }));
+batch.add(new Changeset({ method: 'POST', url: '/_api/ContextInfo' }));
+batch.add(new Changeset({ method: 'GET', url: '/_api/Site', params: { '$select': 'Id, Url, ReadOnly, WriteLocked' } }));
+batch.add(new Changeset({ method: 'GET', url: '/_api/Web', params: { '$select': 'Id, Title, WebTemplate, Created' } }));
 const response = await batch.send();
 console.log(response.ok ? 'Done!' : 'Fail!', response.results);
 ```
@@ -27,9 +27,9 @@ The pre-built `build.min.js` file can be loaded directly into a ES6 compatible b
 ```javascript
 const options = SharePointBatch.GetSharePointOptions();
 const batch = new SharePointBatch(options);
-batch.addChangeset(new SharePointBatch.Changeset({ method: 'POST', url: '/_api/ContextInfo' }));
-batch.addChangeset(new SharePointBatch.Changeset({ method: 'GET', url: '/_api/Site', params: { '$select': 'Id, Url, ReadOnly, WriteLocked' } }));
-batch.addChangeset(new SharePointBatch.Changeset({ method: 'GET', url: '/_api/Web', params: { '$select': 'Id, Title, WebTemplate, Created' } }));
+batch.add(new SharePointBatch.Changeset({ method: 'POST', url: '/_api/ContextInfo' }));
+batch.add(new SharePointBatch.Changeset({ method: 'GET', url: '/_api/Site', params: { '$select': 'Id, Url, ReadOnly, WriteLocked' } }));
+batch.add(new SharePointBatch.Changeset({ method: 'GET', url: '/_api/Web', params: { '$select': 'Id, Title, WebTemplate, Created' } }));
 const response = await batch.send();
 console.log(response.ok ? 'Done!' : 'Fail!', response.results);
 ```
