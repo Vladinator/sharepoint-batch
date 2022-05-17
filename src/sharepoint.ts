@@ -618,6 +618,7 @@ export class SharePointBatch {
         let delayedArgs: any[] = [];
         fallback.done = (...args: any[]) => (delayedDone = true, delayedArgs = args);
         fallback.fail = (...args: any[]) => (delayedFail = true, delayedArgs = args);
+        fallback.finally = () => {};
 
         const results: SharePointBatchJobResponse[] = [];
         let success = 0;
@@ -659,16 +660,16 @@ export class SharePointBatch {
         if (delayedDone) {
 
             safeCall(backup, 'done', delayedArgs[1], results);
+            safeCall(backup, 'finally', delayedArgs[1], results);
+            return { success: true, ok: true, results } as SharePointBatchResponseSuccess;
 
-        } else if (delayedFail) {
+        } else {
 
             safeCall(backup, 'fail', delayedArgs[1], delayedArgs[2], delayedArgs[3], delayedArgs[4]);
-
+            safeCall(backup, 'finally', delayedArgs[1], delayedArgs[2], delayedArgs[3], delayedArgs[4]);
             return { error: true, ok: false, results: delayedArgs[2] } as SharePointBatchResponseError;
 
         }
-
-        return { success: true, ok: true, results } as SharePointBatchResponseSuccess;
 
     }
 
