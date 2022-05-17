@@ -251,8 +251,10 @@ export class Changeset {
         const results: BatchJobHeader[] = [];
 
         if (isObject(headers)) {
-            for (const header in headers) {
-                results.push({ key: header, value: headers[header] });
+            for (const key in headers) {
+                //@ts-ignore
+                const value = headers[key];
+                results.push({ key, value });
             }
         }
 

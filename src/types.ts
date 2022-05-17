@@ -58,7 +58,7 @@ export type BatchJobOptions = RequestOptions & {
  */
 export type BatchJobHeader = {
     key: string;
-    value: any;
+    value: string;
 };
 
 /**

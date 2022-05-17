@@ -33,12 +33,13 @@ export const toParams = (object: any): string => {
                 if (!o.hasOwnProperty(k))
                     continue;
 
+                //@ts-ignore
                 const v = o[k];
 
                 if (Array.isArray(v)) {
-                    p.push(serialize(o[k], k));
+                    p.push(serialize(v, k));
                 } else {
-                    p.push(`${k}=${serialize(o[k])}`);
+                    p.push(`${k}=${serialize(v)}`);
                 }
 
             }

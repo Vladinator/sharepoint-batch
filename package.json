@@ -1,5 +1,5 @@
 {
-  "name": "sharepoint-batch",
+  "name": "@vladinator/sharepoint-batch",
   "version": "1.0.0",
   "description": "SharePoint Batch API",
   "main": "./src/sharepoint.ts",
