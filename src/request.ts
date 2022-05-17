@@ -19,8 +19,8 @@ export const Request = async (options: RequestOptions): Promise<RequestResponse>
             safeCall(options, 'fail', response, ex);
         }
 
-        safeCall(options, 'finally', response);
         resolve(response);
+        safeCall(options, 'finally', response);
 
     });
 
