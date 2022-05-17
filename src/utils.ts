@@ -1,4 +1,4 @@
-import { CallbackProps, RequestOptions } from './types';
+import { CallbackProps, RequestOptions, BatchJobOptions, SharePointBatchOptions } from './types';
 
 export const isArray = (object: any) => Array.isArray(object);
 
@@ -22,7 +22,7 @@ export const toParams = (object: any): string => {
         if (isArray(o)) {
 
             //@ts-expect-error
-            return o.map((v, k) => `${n || arrayPrefix}[${k}]=${serialize(v)}`).join(paramDelim);
+            return o.map((v: any, k: any) => `${n || arrayPrefix}[${k}]=${serialize(v)}`).join(paramDelim);
 
         } else if (isObject(o)) {
 
@@ -75,8 +75,10 @@ export const createGUID = (): string => {
     });
 };
 
-export const safeCall = (options: RequestOptions, prop: CallbackProps, ...args: any) => {
+export const safeCall = (options: RequestOptions | BatchJobOptions | SharePointBatchOptions, prop: CallbackProps, ...args: any[]) => {
     const value = options[prop];
-    if (typeof value === 'function')
-        value.call(null, options, ...args);
+    if (typeof value !== 'function')
+        return;
+    //@ts-expect-error
+    value.call(null, options, ...args);
 };

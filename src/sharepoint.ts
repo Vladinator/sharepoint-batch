@@ -1,4 +1,4 @@
-import { RequestMethods, RequestOptions, SharePointOptions, BatchJobOptions, BatchJobHeader, SharePointBatchJobResponse, ResponseParserPayload, SharePointBatchResponse, SharePointBatchResponseSuccess, SharePointBatchResponseError } from './types';
+import { RequestMethods, RequestOptions, SharePointOptions, BatchJobOptions, BatchJobHeader, SharePointBatchJobResponse, ResponseParserPayload, SharePointBatchResponse, SharePointBatchResponseSuccess, SharePointBatchResponseError, SharePointBatchOptions } from './types';
 import { isArray, isObject, isString, extend, toParams, createGUID, safeCall } from './utils';
 import { Request } from './request';
 
@@ -406,10 +406,11 @@ class BatchJob {
         const batchOptions = batch.getOptions();
 
         //@ts-expect-error
-        const fallback: RequestOptions = extend({}, FallbackRequestOptions, batchOptions, options);
+        const fallback = extend({}, FallbackRequestOptions, batchOptions, options) as RequestOptions;
 
         const guid = createGUID();
 
+        fallback.method = 'POST';
         fallback.url = `${batchOptions.url}/_api/$batch`;
 
         if (fallback.headers) {
@@ -452,31 +453,44 @@ class BatchJob {
         const changesets = this.#changesets;
         changesets.forEach(changeset => safeCall(changeset.getOptions(), 'before', changeset));
 
-        const safeError = (...args: any): undefined => {
-            changesets.forEach(changeset => safeCall(changeset.getOptions(), 'fail', changeset, ...args));
+        const safeDone = () => {
+            changesets.forEach(changeset => safeCall(changeset.getOptions(), 'done', changeset));
+        };
+
+        const safeError = () => {
+            changesets.forEach(changeset => safeCall(changeset.getOptions(), 'fail', changeset));
             changesets.forEach(changeset => safeCall(changeset.getOptions(), 'finally', changeset));
-            return;
         };
 
         const safeFinally = () => {
             changesets.forEach(changeset => safeCall(changeset.getOptions(), 'finally', changeset));
         };
 
-        const fallback: RequestOptions = this.#getSendOptions(batch, options);
+        const fallback = this.#getSendOptions(batch, options);
 
         //@ts-expect-error
-        const backup: RequestOptions = extend({}, fallback);
+        const backup = extend({}, FallbackBatchJobOptions, fallback) as RequestOptions;
 
+        // store the state from the original response callbacks
         let delayedDone = false;
         let delayedFail = false;
-        fallback.done = () => delayedDone = true;
-        fallback.fail = () => delayedFail = true;
+        let delayedArgs: any[] = [];
 
+        // override the handlers with our own on the fallback object
+        fallback.before = () => {};
+        fallback.done = (...args: any[]) => (delayedDone = true, delayedArgs = args);
+        fallback.fail = (...args: any[]) => (delayedFail = true, delayedArgs = args);
+        fallback.finally = () => {};
+
+        // perform the query
         const response = await Request(fallback);
+
+        // drop the fallback option reference from the start of the array
+        delayedArgs.shift();
 
         if (!response) {
             if (delayedFail)
-                safeCall(backup, 'fail', response);
+                safeCall(backup, 'fail', response, delayedArgs[3] || delayedArgs[1], 0, delayedArgs[3] || delayedArgs[1]); // override the callback arguments to include data we want made aware of in the parent caller (added `delayedArgs`)
             safeError();
             return;
         }
@@ -486,8 +500,8 @@ class BatchJob {
         if (!payload || !response.ok) {
             const safePayload = ResponseParser.SafeParse(payload);
             if (delayedFail)
-                safeCall(backup, 'fail', response, safePayload, response.status, response.statusText);
-            safeError(safePayload, response.status, response.statusText);
+                safeCall(backup, 'fail', response, safePayload, response.status, response.statusText); // override the callback arguments to include data we want made aware of in the parent caller (added `safePayload`)
+            safeError();
             return;
         }
 
@@ -496,7 +510,7 @@ class BatchJob {
         if (!isArray(parsed)) {
             changesets.forEach(changeset => this.#processResponsePayload(changeset, payload));
             if (delayedDone)
-                safeCall(backup, 'done', response, payload);
+                safeCall(backup, 'done', response, payload); // override the callback arguments to include data we want made aware of in the parent caller (added `payload`)
             safeFinally();
             return payload;
         }
@@ -504,7 +518,8 @@ class BatchJob {
         const changesetPayloads = parsed as ResponseParserPayload[];
         changesets.forEach((changeset, index) => this.#processResponsePayload(changeset, changesetPayloads[index]));
         if (delayedDone)
-            safeCall(backup, 'done', response, changesetPayloads);
+            safeCall(backup, 'done', response, changesetPayloads); // override the callback arguments to include data we want made aware of in the parent caller (added `changesetPayloads`)
+        safeDone();
         safeFinally();
         return changesetPayloads;
 
@@ -570,7 +585,7 @@ export class SharePointBatch {
     #appendNewJob(options?: BatchJobOptions): BatchJob {
 
         //@ts-expect-error
-        const fallback: BatchJobOptions = extend({}, FallbackBatchJobOptions, this.#options, options);
+        const fallback = extend({}, FallbackBatchJobOptions, this.#options, options) as BatchJobOptions;
 
         this.#job = new BatchJob(fallback);
         this.#jobs.push(this.#job);
@@ -599,6 +614,14 @@ export class SharePointBatch {
     }
 
     /**
+     * Returns all changesets in the batch queue.
+     * @returns Array of changesets.
+     */
+    getChangesets(): Changeset[] {
+        return this.#jobs.reduce((pv, cv) => { pv.push(...cv.getChangesets()); return pv; }, [] as Changeset[]);
+    }
+
+    /**
      * Process the batch queue. Supports `await` but the results is all the returned data for each changeset.
      * 
      * You can assign the `done` and `fail` to the optional argument `options` and they will be called based on estimation given the results of the request.
@@ -607,17 +630,21 @@ export class SharePointBatch {
      * @param options Optional `RequestOptions` object.
      * @returns `Promise` that returns an array of `SharePointBatchResponse` but in case of errors the array item will be `undefined` or a `string` whenever available.
      */
-    async send(options?: RequestOptions): Promise<SharePointBatchResponse> {
+    async send(options?: SharePointBatchOptions): Promise<SharePointBatchResponse> {
 
         //@ts-expect-error
-        const fallback: RequestOptions = extend({}, options);
+        const fallback = extend({}, FallbackBatchJobOptions, options) as RequestOptions;
 
         //@ts-expect-error
-        const backup: RequestOptions = extend({}, fallback);
+        const backup = extend({}, FallbackBatchJobOptions, fallback) as SharePointBatchOptions;
 
+        // store the state from the original response callbacks
         let delayedDone = false;
         let delayedFail = false;
         let delayedArgs: any[] = [];
+
+        // override the handlers with our own on the fallback object
+        fallback.before = () => {};
         fallback.done = (...args: any[]) => (delayedDone = true, delayedArgs = args);
         fallback.fail = (...args: any[]) => (delayedFail = true, delayedArgs = args);
         fallback.finally = () => {};
@@ -656,22 +683,24 @@ export class SharePointBatch {
         // if we have no done or fail it means the queue was empty
         if (!delayedDone && !delayedFail) {
             delayedDone = true;
-            delayedArgs[0] = backup;
+            delayedArgs[1] = backup;
         }
 
+        // drop the fallback option reference from the start of the array
+        delayedArgs.shift();
+
+        // if success we return the appropriate data
         if (delayedDone) {
-
-            safeCall(backup, 'done', delayedArgs[1], results);
-            safeCall(backup, 'finally', delayedArgs[1], results);
+            delayedArgs[1] = results;
+            safeCall(backup, 'done', ...delayedArgs);
+            safeCall(backup, 'finally', ...delayedArgs);
             return { success: true, ok: true, results } as SharePointBatchResponseSuccess;
-
-        } else {
-
-            safeCall(backup, 'fail', delayedArgs[1], delayedArgs[2], delayedArgs[3], delayedArgs[4]);
-            safeCall(backup, 'finally', delayedArgs[1], delayedArgs[2], delayedArgs[3], delayedArgs[4]);
-            return { error: true, ok: false, results: delayedArgs[2] } as SharePointBatchResponseError;
-
         }
+
+        // otherwise return failed result from the response
+        safeCall(backup, 'fail', ...delayedArgs);
+        safeCall(backup, 'finally', ...delayedArgs);
+        return { error: true, ok: false, results: delayedArgs[1] } as SharePointBatchResponseError;
 
     }
 

@@ -3,11 +3,11 @@ import { Changeset } from './sharepoint';
 /**
  * Callback options.
  */
-export type CallbackOptions = {
-    before?: Function;
-    done?: Function;
-    fail?: Function;
-    finally?: Function;
+export type Callbacks<B, D, F, A> = {
+    before?: B;
+    done?: D;
+    fail?: F;
+    finally?: A;
 }
 
 /**
@@ -20,13 +20,18 @@ export type CallbackProps = 'before' | 'done' | 'fail' | 'finally';
  */
 export type RequestMethods = 'GET' | 'HEAD' | 'POST' | 'PUT' | 'DELETE' | 'CONNECT' | 'OPTIONS' | 'TRACE' | 'PATCH';
 
-/**
- * Request options with callback options.
- */
-export type RequestOptions = CallbackOptions & RequestInit & {
+export type RequestCallback = (options: RequestOptions, response: RequestResponse) => void;
+export type RequestCallbackFail = (options: RequestOptions, response: RequestResponse, status?: number | string, statusText?: string) => void;
+
+export type RequestOptionsBase = RequestInit & {
     method: RequestMethods;
     url: string;
 };
+
+/**
+ * Request options with callback options.
+ */
+export type RequestOptions = RequestOptionsBase & Callbacks<RequestCallback, RequestCallback, RequestCallbackFail, RequestCallback>;
 
 /**
  * Request response.
@@ -46,10 +51,13 @@ export type SharePointOptions = {
  */
 export type SharePointParams = Record<string, any> | undefined;
 
+export type BatchJobCallback = (options: BatchJobOptions, changeset: Changeset) => void;
+export type BatchJobCallbackResponse = (options: BatchJobOptions, changeset: Changeset, response: ResponseParserPayload) => void;
+
 /**
  * Request options with optional params array.
  */
-export type BatchJobOptions = RequestOptions & {
+export type BatchJobOptions = RequestOptionsBase & Callbacks<BatchJobCallback, BatchJobCallbackResponse, BatchJobCallbackResponse, BatchJobCallback> & {
     params?: SharePointParams[];
 };
 
@@ -112,3 +120,12 @@ export type ResponseParserPayload = {
     ok: boolean;
     data: any;
 };
+
+export type SharePointBatchCallback = (options: SharePointBatchOptions, response: RequestResponse) => void;
+export type SharePointBatchCallbackResult = (options: SharePointBatchOptions, response: RequestResponse, result: SharePointBatchResponse) => void;
+export type SharePointBatchCallbackFail = (options: SharePointBatchOptions, response: RequestResponse, result: SharePointBatchResponse | string, status: number, statusText: string) => void;
+
+/**
+ * Special callback parameters are used in the batch callback options.
+ */
+export type SharePointBatchOptions = RequestOptionsBase & Callbacks<SharePointBatchCallback, SharePointBatchCallbackResult, SharePointBatchCallbackFail, SharePointBatchCallbackResult>;
