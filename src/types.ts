@@ -58,7 +58,7 @@ export type BatchJobCallbackResponse = (options: BatchJobOptions, changeset: Cha
  * Request options with optional params array.
  */
 export type BatchJobOptions = RequestOptionsBase & Callbacks<BatchJobCallback, BatchJobCallbackResponse, BatchJobCallbackResponse, BatchJobCallback> & {
-    params?: SharePointParams[];
+    params?: SharePointParams;
 };
 
 /**

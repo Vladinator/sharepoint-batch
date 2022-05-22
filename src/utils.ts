@@ -8,63 +8,59 @@ export const isString = (object: any) => typeof object === 'string';
 
 export const extend = <T>(target: T, ...sources: T[]): T => Object.assign(target as Object, ...sources);
 
-export const toParams = (object: any): string => {
+export const toParams = (object: any, traditional: boolean = false): string => {
+
+    if (!isObject(object))
+        return '';
+
+    const bracket = /\[\]$/;
+    const results: string[] = [];
+
+    const append = (key: any, val: any): void => {
+        val = typeof val === 'function' ? val() : val;
+        val = val == null ? '' : val;
+        results[results.length] = `${encodeURIComponent(key)}=${encodeURIComponent(val)}`;
+    };
+
+    const serialize = (prefix: string, obj: any, root: boolean = false): void => {
+
+        if (isArray(obj)) {
+
+            for (let i = 0; i < obj.length; i++) {
+                const val = obj[i];
+                if (traditional || bracket.test(prefix)) {
+                    append(prefix, val);
+                } else {
+                    const k = isObject(val) ? i : '';
+                    serialize(root ? `a[${k}]` : `${prefix}[${k}]`, val);
+                }
+            }
+
+        } else if (!traditional && isObject(obj)) {
+
+            for (const key in obj) {
+                serialize(root ? `${prefix}${key}` : `${prefix}[${key}]`, obj[key]);
+            }
+
+        } else {
+
+            append(prefix, obj);
+
+        }
+
+    };
 
     if (object == null)
         return '';
 
-    const arrayPrefix = 'a';
-    const paramPrefix = '?';
-    const paramDelim = '&';
+    serialize('', object, true);
 
-    const serialize = (o: object, n?: string): string => {
+    const result = results.join('&');
 
-        if (isArray(o)) {
-
-            //@ts-expect-error
-            return o.map((v: any, k: any) => `${n || arrayPrefix}[${k}]=${serialize(v)}`).join(paramDelim);
-
-        } else if (isObject(o)) {
-
-            const p: string[] = [];
-
-            for (const k in o) {
-
-                if (!o.hasOwnProperty(k))
-                    continue;
-
-                //@ts-ignore
-                const v = o[k];
-
-                if (Array.isArray(v)) {
-                    p.push(serialize(v, k));
-                } else {
-                    p.push(`${k}=${serialize(v)}`);
-                }
-
-            }
-
-            return p.join(paramDelim);
-
-        }
-
-        const p = `${o}`;
-
-        try {
-            return encodeURIComponent(p);
-        } catch (ex) {
-        }
-
-        return p;
-
-    };
-
-    const params = serialize(object);
-
-    if (!params.length)
+    if (result === '')
         return '';
 
-    return `${paramPrefix}${params}`;
+    return `?${result}`;
 
 };
 

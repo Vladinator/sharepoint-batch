@@ -1,6 +1,6 @@
 {
   "name": "sharepoint-batch",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "description": "SharePoint Batch API",
   "main": "./src/sharepoint.ts",
   "typings": "./src/sharepoint.ts",

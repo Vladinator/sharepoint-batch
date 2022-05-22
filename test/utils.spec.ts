@@ -111,10 +111,10 @@ describe('util', () => {
             expects: [
                 /* 0 */ '',
                 /* 1 */ '',
-                /* 2 */ '?1234',
-                /* 3 */ '?text',
-                /* 4 */ '?true',
-                /* 5 */ '?false',
+                /* 2 */ '',
+                /* 3 */ '',
+                /* 4 */ '',
+                /* 5 */ '',
                 /* 6 */ '',
                 /* 7 */ '?length=0',
                 /* 8 */ '',
@@ -158,12 +158,12 @@ describe('util', () => {
 
     it('toParams', () => {
         runTestKVPairs('toParams');
-        equal(toParams([ 1, 2, 3 ]), '?a[0]=1&a[1]=2&a[2]=3'); // arrays work but we expect object of kv-pair nature
-        equal(toParams([ 'a', 'b', 'c' ]), '?a[0]=a&a[1]=b&a[2]=c'); // arrays work but we expect object of kv-pair nature
-        equal(toParams([ 'a', ['x'], 'c' ]), '?a[0]=a&a[1]=a[0]=x&a[2]=c'); // arrays work but we expect object of kv-pair nature (TODO: malformed)
-        equal(toParams([ 'a', { x: 'y' }, 'c' ]), '?a[0]=a&a[1]=x=y&a[2]=c'); // arrays work but we expect object of kv-pair nature (TODO: malformed)
-        equal(toParams({ '$select': 'Id,Title', '$filter': 'Title ne null', '$expand': 'Author/Title' }), '?$select=Id%2CTitle&$filter=Title%20ne%20null&$expand=Author%2FTitle');
-        equal(toParams({ 'key': 1234, 'obj': { a: 1, b: 2, c: 3 }, 'arr': [ 'hello', 'world' ] }), '?key=1234&obj=a=1&b=2&c=3&arr[0]=hello&arr[1]=world'); // we don't expect to work with objects in child levels (TODO: malformed)
+        equal(toParams([ 1, 2, 3 ]), '?a%5B%5D=1&a%5B%5D=2&a%5B%5D=3'); // ?a[]=1&a[]=2&a[]=3
+        equal(toParams([ 'a', 'b', 'c' ]), '?a%5B%5D=a&a%5B%5D=b&a%5B%5D=c'); // ?a[]=a&a[]=b&a[]=c
+        equal(toParams([ 'a', ['x'], 'c' ]), '?a%5B%5D=a&a%5B1%5D%5B%5D=x&a%5B%5D=c'); // ?a[]=a&a[1][]=x&a[]=c
+        equal(toParams([ 'a', { x: 'y' }, 'c' ]), '?a%5B%5D=a&a%5B1%5D%5Bx%5D=y&a%5B%5D=c'); // ?a[]=a&a[1][x]=y&a[]=c
+        equal(toParams({ '$select': 'Id,Title', '$filter': 'Title ne null', '$expand': 'Author/Title' }), '?%24select=Id%2CTitle&%24filter=Title%20ne%20null&%24expand=Author%2FTitle'); // ?$select=Id,Title&$filter=Title ne null&$expand=Author/Title
+        equal(toParams({ 'key': 1234, 'obj': { a: 1, b: 2, c: 3 }, 'arr': [ 'hello', 'world' ] }), '?key=1234&obj%5Ba%5D=1&obj%5Bb%5D=2&obj%5Bc%5D=3&arr%5B%5D=hello&arr%5B%5D=world'); // ?key=1234&obj[a]=1&obj[b]=2&obj[c]=3&arr[]=hello&arr[]=world
     });
 
 });
